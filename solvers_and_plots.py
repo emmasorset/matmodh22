@@ -28,22 +28,39 @@ def get_AB(nx, ny, mu):
     B_diag_block = sp.diags(B_diag_vals, offsets, shape=[nx, nx])  # type: ignore
     A_diag_block = sp.csc_matrix(A_diag_block)
     B_diag_block = sp.csc_matrix(B_diag_block)
-    A_diag_block[[0, -1],[0,-1]] = 1+3*mu
-    B_diag_block[[0,-1],[0,-1]] = 1-3*mu
+    # A_diag_block[[0, -1],[0,-1]] = 1+3*mu
+    # B_diag_block[[0,-1],[0,-1]] = 1-3*mu
+    # ------------ CHANGES -----------------
+    A_diag_block[[0, -1],[0,-1]] = 1
+    A_diag_block[[0, -1],[1,-2]] = 0
+    B_diag_block[[0,-1],[0,-1]] = 1
+    B_diag_block[[0, -1],[1,-2]] = 0
+    # --------------------------------------
 
     # Create blocks for upper left and lower right corner
-    A_corner_vals = [-mu, 1+3*mu, -mu]
-    B_corner_vals = [mu, 1-3*mu, mu]
-    A_corner_block = sp.diags(A_corner_vals, offsets, shape=[nx, nx])  # type: ignore
-    B_corner_block = sp.diags(B_corner_vals, offsets, shape=[nx, nx])  # type: ignore
+    # A_corner_vals = [-mu, 1+3*mu, -mu]
+    # B_corner_vals = [mu, 1-3*mu, mu]
+    # A_corner_block = sp.diags(A_corner_vals, offsets, shape=[nx, nx])  # type: ignore
+    # B_corner_block = sp.diags(B_corner_vals, offsets, shape=[nx, nx])  # type: ignore
+    # ------------ CHANGES -----------------
+    A_corner_block = sp.identity(nx)
+    B_corner_block = sp.identity(nx)
+    # --------------------------------------
     A_corner_block = sp.csc_matrix(A_corner_block)
     B_corner_block = sp.csc_matrix(B_corner_block)
-    A_corner_block[[0,-1],[0,-1]] = 1+2*mu
-    B_corner_block[[0,-1],[0,-1]] = 1-2*mu
+    # A_corner_block[[0,-1],[0,-1]] = 1+2*mu
+    # B_corner_block[[0,-1],[0,-1]] = 1-2*mu
 
     # Create offdiagonal blocks
     A_offdiag_block = sp.diags([-mu], [0], shape=[nx, nx])  # type: ignore
     B_offdiag_block = sp.diags([mu], [0], shape=[nx, nx])  # type: ignore
+    # ------------ CHANGES -----------------
+    A_offdiag_block = sp.csc_matrix(A_offdiag_block)
+    B_offdiag_block = sp.csc_matrix(B_offdiag_block)
+    A_offdiag_block[[0,-1],[0,-1]] = 0
+    B_offdiag_block[[0, -1],[0,-1]]= 0
+    # --------------------------------------
+
 
     # Assembly
     A_mosaic = [
@@ -62,6 +79,13 @@ def get_AB(nx, ny, mu):
     A[-nx:, -nx:] = A_corner_block
     B[:nx, :nx] = B_corner_block
     B[-nx:, -nx:] = B_corner_block
+    # ------------ CHANGES -----------------
+    A[:nx, nx:2*nx] = 0
+    A[-nx:, -2*nx:-nx] = 0
+    B[:nx, nx:2*nx] = 0
+    B[-nx:, -2*nx:-nx] = 0
+    # --------------------------------------
+
     return A, B
 
 # %% Crank Nicholson solver
@@ -112,8 +136,8 @@ def simulate_2DConserved(eqn, config):
     AinvB = Ainv@B
 
     for step in range(tsteps-1):
-        reaction = Ainv @ (dt*eqn.f(n[step,:], r[step,:], b[step,:]))
-        n[step+1,:] = AinvB@n[step,:] + reaction
+        reaction = (dt*eqn.f(n[step,:], r[step,:], b[step,:]))
+        n[step+1,:] = AinvB@n[step,:] + Ainv @ reaction
         r[step+1,:] = r[step,:] + reaction
         b[step+1,:] = b[step,:] - reaction
     return n, r, b
@@ -138,7 +162,7 @@ def get_prepped_solution(nx, ny, tsteps):
     edgesize = 3*(2*radius)
     dx = edgesize / nx
     dy = edgesize / ny
-    dt = 1.e-10
+    dt = 1e-10 * (31/nx)**2
     #tsteps = 200
     D = 8e-7
     k1 = 4e6
@@ -206,7 +230,7 @@ def animate_2DConserved(field, nx, ny, tsteps):
     from matplotlib import animation
     from mpl_toolkits.mplot3d import Axes3D  # type: ignore
     plot_args = {'rstride': 1, 'cstride': 1, 'cmap': 'viridis',
-                 'linewidth': 0, 'antialiased': False, 'alpha': 0.7}
+                 'linewidth': 0, 'antialiased': False, 'alpha': 0.6}
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     X = np.linspace(0, 1, nx)
@@ -224,12 +248,12 @@ def animate_2DConserved(field, nx, ny, tsteps):
     plt.close()
 
 # %% Visualize all fields in the model
-def plot_all_fields():
+def plot_all_fields(nx, ny, tsteps):
     """Animates all fields in the model.
     """
-    nx = 31
-    ny = 31
-    tsteps = 200
+    # nx = 31
+    # ny = 31
+    # tsteps = 200
     n, r, b = get_prepped_solution(nx, ny, tsteps)
     animate_2DConserved(n, nx, ny, tsteps)
     animate_2DConserved(r, nx, ny, tsteps)
@@ -253,8 +277,25 @@ def time_exitation(nx, ny, max_tsteps):
     plt.title(f'Exitation at t = {excitation_time:5.2e}')
     plt.grid()
     plt.show()
-time_exitation(31, 31, 500)
+# time_exitation(31, 31, 500)
     
+
+# %% Make delivery quality plots
+def plot_evolution_and_time(nx, ny, tsteps):
+    plt.style.use('seaborn')
+    n, r, b = get_prepped_solution(nx, ny, tsteps)
+    X, Y = np.meshgrid(np.linspace(0,1,nx), np.linspace(0,1,ny))
+    fig = plt.figure(figsize=(10,10))
+    # Orders the subplots nicely through matplotlib hacks
+    ax_dict = fig.subplot_mosaic(
+        [
+            ['c0'  , 'c1'  , 'c2'],
+            ['c3'  , 'c4'  , 'c5'],
+            ['time', 'time', 'time']
+        ]
+    )
+    # ax_dict['c0'].
+
 # %%
 def test1():
     import numpy as np
@@ -304,4 +345,25 @@ def test2():
     print(neurotr.max())
     plt.imshow(neurotr)
 #test()
-# %%
+
+def debug_matrix():
+    A, B = get_AB(6, 6, 10)
+    with open('matmodh22/matview_dirichlet.txt', 'w') as file:
+        np.savetxt(file, A.todense(), fmt='%3.0f')
+        file.write('\n\n')
+        np.savetxt(file, B.todense(), fmt='%3.0f')
+# %% Run stuff
+
+# plot_animation = 0
+# plot_time      = 1
+# matrix_debug   = 0
+# produce_results= 0
+
+# if plot_animation:
+#     plot_all_fields(41, 41, 200)
+# if plot_time:
+#     time_exitation(41, 41, 1000)
+# if matrix_debug:
+#     debug_matrix()
+# if produce_results:
+#     plot_evolution_and_time(41, 41, 1000)
