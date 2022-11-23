@@ -31,3 +31,10 @@ The switches at the top of the file allows control over which modelling case to 
 `produce_results`<br>
 - `1:` Produce report-style plots based on above config. Saves the figures as `.pdf` files in the relative path `plots/<cond>/`, where `<cond>` is either `dirchlet`, `neumann`, or `flow`, based on the config.
 - `0:` No report plotting
+
+
+## `drodling.ipynb`
+A Jupyter notebook used for experimentation with the numerical schemes. The contents are not directly relevant to the results presented in the project, but it illustrates a part of the way we worked with the code.
+
+## `test.py`
+Contains an implementation of the discrete Laplace operator in polar coordinates.

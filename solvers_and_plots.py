@@ -263,7 +263,7 @@ def get_prepped_solution(nx, ny, tsteps, conds='dirichlet'):
     #n0 = zero.copy()
     #r0 = zero.copy()
     #b0 = zero.copy()
-    n_rec = 1e3 * (2*radius*1e6)**2  # (Receptor density (𝜇m⁻¹)) * (membrane area (𝜇m)) = # of receptors
+    n_rec = 1e3 * np.pi*(radius*1e6)**2  # (Receptor density (μm⁻²)) * (membrane area (μm⁻²)) = # of receptors
     n_sites = 5                      # Number of ventricle release sites
     def dist_rec():
         X = np.linspace(0, edgesize, nx)

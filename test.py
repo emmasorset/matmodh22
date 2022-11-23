@@ -1,13 +1,9 @@
-print('heihei') #feil
-
-print('hei igjen')
-
 import numpy as np
 
-def laplacePolar(A,n,dr,dtheta):   #tenker A er en matrise
+def laplacePolar(A,n,dr,dtheta):
     f=np.zeros((n,n))
-    f[0,0]=A[0,0]              #trenger en form for endebetingelser
-    f[n-1,n-1]=A[n-1,n-1]      #her er jeg også usikker
+    f[0,0]=A[0,0]
+    f[n-1,n-1]=A[n-1,n-1]
     for i in range(1,n-2):
         for j in range(1,n-2):
             d2fdr2=(A[i+1,j]-2*A[i,j]+A[i-1,j])/(dr**2)
